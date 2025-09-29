@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
