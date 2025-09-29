@@ -1,10 +1,5 @@
 jQuery(document).ready(function($) {
     
-    // Auto-save settings on change
-    $('#ai-seo-settings input, #ai-seo-settings textarea, #ai-seo-settings select').on('change', function() {
-        // Optional: Add auto-save functionality
-    });
-    
     // Process individual post
     window.processPost = function(postId, keyword) {
         if (!keyword) {
@@ -101,7 +96,7 @@ jQuery(document).ready(function($) {
                     const result = JSON.parse(response);
                     alert(result.message);
                     if (result.success) {
-                        loadPosts(); // Reload the table
+                        loadPosts();
                     }
                 } catch (e) {
                     alert('Error processing response');
@@ -115,8 +110,111 @@ jQuery(document).ready(function($) {
         });
     };
     
-    // Initialize posts table if we're on the automation page
+    // Load media items
+    window.loadMediaItems = function() {
+        const tableContainer = $('#media-table');
+        
+        tableContainer.html('<p>Loading media items...</p>');
+        
+        $.ajax({
+            url: ai_seo_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'ai_seo_get_media',
+                nonce: ai_seo_ajax.nonce
+            },
+            success: function(response) {
+                tableContainer.html(response);
+            },
+            error: function() {
+                tableContainer.html('<p>Error loading media</p>');
+            }
+        });
+    };
+    
+    // Process individual media
+    window.processMedia = function(attachmentId) {
+        const button = $(`button[onclick="processMedia(${attachmentId})"]`);
+        const originalText = button.text();
+        
+        button.text('Processing...').prop('disabled', true);
+        
+        $.ajax({
+            url: ai_seo_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'ai_seo_process_media',
+                attachment_id: attachmentId,
+                nonce: ai_seo_ajax.nonce
+            },
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    if (result.success) {
+                        $(`#ai-alt-${attachmentId}`).html(result.alt_text);
+                        button.text('Updated!').removeClass('button').addClass('button-primary');
+                        setTimeout(() => {
+                            button.text(originalText).removeClass('button-primary').addClass('button').prop('disabled', false);
+                        }, 2000);
+                    } else {
+                        alert('Error: ' + result.message);
+                        button.text(originalText).prop('disabled', false);
+                    }
+                } catch (e) {
+                    alert('Error processing response');
+                    button.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('AJAX error occurred');
+                button.text(originalText).prop('disabled', false);
+            }
+        });
+    };
+    
+    // Bulk process media
+    window.bulkProcessMedia = function() {
+        const button = $('button[onclick="bulkProcessMedia()"]');
+        const originalText = button.text();
+        
+        if (!confirm('Process all media items? This may take a while.')) {
+            return;
+        }
+        
+        button.text('Processing...').prop('disabled', true);
+        
+        $.ajax({
+            url: ai_seo_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'ai_seo_bulk_process_media',
+                nonce: ai_seo_ajax.nonce
+            },
+            success: function(response) {
+                try {
+                    const result = JSON.parse(response);
+                    alert(result.message);
+                    if (result.success) {
+                        loadMediaItems();
+                    }
+                } catch (e) {
+                    alert('Error processing response');
+                }
+                button.text(originalText).prop('disabled', false);
+            },
+            error: function() {
+                alert('AJAX error occurred');
+                button.text(originalText).prop('disabled', false);
+            }
+        });
+    };
+    
+    // Initialize on page load
     if (window.location.href.indexOf('ai-seo-automation') !== -1) {
         loadPosts();
+    }
+    
+    if (window.location.href.indexOf('ai-seo-media') !== -1) {
+        loadMediaItems();
     }
 });

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.0.2
+ * Version: 1.1.0
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -39,6 +39,9 @@ class AISEOPlugin {
         add_action('wp_ajax_ai_seo_process', array($this, 'ajax_process_post'));
         add_action('wp_ajax_ai_seo_bulk_process', array($this, 'ajax_bulk_process'));
         add_action('wp_ajax_ai_seo_get_posts', array($this, 'ajax_get_posts'));
+        add_action('wp_ajax_ai_seo_get_media', array($this, 'ajax_get_media'));
+        add_action('wp_ajax_ai_seo_process_media', array($this, 'ajax_process_media'));
+        add_action('wp_ajax_ai_seo_bulk_process_media', array($this, 'ajax_bulk_process_media'));
     }
     
     public function init() {
@@ -73,11 +76,19 @@ class AISEOPlugin {
             'ai-seo-automation',
             array($this, 'automation_page')
         );
+        add_submenu_page(
+            'ai-seo',
+            'Media Automation',
+            'Media Automation',
+            'manage_options',
+            'ai-seo-media',
+            array($this, 'media_page')
+        );
     }
     
     public function enqueue_scripts($hook) {
         if (strpos($hook, 'ai-seo') !== false) {
-            wp_enqueue_script('ai-seo-admin', plugin_dir_url(__FILE__) . 'admin.js', array('jquery'), '1.0.0', true);
+            wp_enqueue_script('ai-seo-admin', plugin_dir_url(__FILE__) . 'admin.js', array('jquery'), '1.1.0', true);
             wp_localize_script('ai-seo-admin', 'ai_seo_ajax', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('ai_seo_nonce')
@@ -93,6 +104,7 @@ class AISEOPlugin {
             update_option('ai_seo_model', sanitize_text_field($_POST['model']));
             update_option('ai_seo_prompt', sanitize_textarea_field($_POST['prompt']));
             update_option('ai_seo_plugin', sanitize_text_field($_POST['seo_plugin']));
+            update_option('ai_seo_media_prompt', sanitize_textarea_field($_POST['media_prompt']));
             echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
         }
         
@@ -100,6 +112,7 @@ class AISEOPlugin {
         $keywords = get_option('ai_seo_keywords', '');
         $api_key = get_option('ai_seo_api_key', '');
         $model = get_option('ai_seo_model', 'x-ai/grok-4-fast:free');
+        $media_prompt = stripslashes(get_option('ai_seo_media_prompt', 'Generate a descriptive, SEO-friendly alt text for this image. Company: {company_name}. Image URL: {image_url}. Return JSON format: {"alt_text": "descriptive alt text here"}'));
         
         $prompt = stripslashes(get_option('ai_seo_prompt', 'Generate SEO meta title and description for the following content. Company: {company_name}. Target keywords: {keywords}. Content: {content}. Return JSON format: {"meta_title": "title here", "meta_description": "description here"}'));
         $seo_plugin = get_option('ai_seo_plugin', $this->detect_seo_plugin());
@@ -135,6 +148,10 @@ class AISEOPlugin {
                     <tr>
                         <th><label for="prompt">AI Prompt</label></th>
                         <td><textarea id="prompt" name="prompt" rows="5" cols="50"><?php echo htmlspecialchars($prompt, ENT_QUOTES, 'UTF-8'); ?></textarea></td>
+                    </tr>
+                    <tr>
+                        <th><label for="media_prompt">Media Alt Text Prompt</label></th>
+                        <td><textarea id="media_prompt" name="media_prompt" rows="5" cols="50"><?php echo esc_textarea($media_prompt); ?></textarea></td>
                     </tr>
                     <tr>
                         <th><label for="seo_plugin">SEO Plugin</label></th>
@@ -225,6 +242,21 @@ class AISEOPlugin {
             loadPosts();
         });
         </script>
+        <?php
+    }
+
+    public function media_page() {
+        ?>
+        <div class="wrap">
+            <h1>Media Automation</h1>
+            
+            <div style="margin-bottom: 20px;">
+                <button type="button" class="button button-primary" onclick="loadMediaItems()">Load Media Items</button>
+                <button type="button" class="button" onclick="bulkProcessMedia()">Bulk Process All</button>
+            </div>
+            
+            <div id="media-table"></div>
+        </div>
         <?php
     }
     
@@ -546,6 +578,156 @@ class AISEOPlugin {
             return 'rankmath';
         }
         return 'yoast'; // default
+    }
+
+    public function ajax_get_media() {
+        check_ajax_referer('ai_seo_nonce', 'nonce');
+        
+        $attachments = get_posts(array(
+            'post_type' => 'attachment',
+            'post_mime_type' => 'image',
+            'post_status' => 'inherit',
+            'numberposts' => 50
+        ));
+        
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr><th>ID</th><th>Image</th><th>Filename</th><th>Current Alt Text</th><th>AI Suggested Alt</th><th>Action</th></tr></thead>';
+        echo '<tbody>';
+        
+        foreach ($attachments as $attachment) {
+            $current_alt = get_post_meta($attachment->ID, '_wp_attachment_image_alt', true);
+            $image_url = wp_get_attachment_url($attachment->ID);
+            $thumbnail = wp_get_attachment_image($attachment->ID, array(80, 80));
+            
+            echo '<tr>';
+            echo '<td>' . $attachment->ID . '</td>';
+            echo '<td>' . $thumbnail . '</td>';
+            echo '<td>' . basename($image_url) . '</td>';
+            echo '<td>' . esc_html($current_alt) . '</td>';
+            echo '<td id="ai-alt-' . $attachment->ID . '">-</td>';
+            echo '<td>';
+            echo '<button type="button" class="button" onclick="processMedia(' . $attachment->ID . ')">Process</button>';
+            echo '</td>';
+            echo '</tr>';
+        }
+        
+        echo '</tbody></table>';
+        wp_die();
+    }
+
+    public function ajax_process_media() {
+        check_ajax_referer('ai_seo_nonce', 'nonce');
+        
+        $attachment_id = intval($_POST['attachment_id']);
+        
+        $result = $this->process_media_alt($attachment_id);
+        
+        wp_die(json_encode($result));
+    }
+    
+    private function process_media_alt($attachment_id) {
+        $image_url = wp_get_attachment_url($attachment_id);
+        
+        if (!$image_url) {
+            return array('success' => false, 'message' => 'Image not found');
+        }
+        
+        $ai_result = $this->generate_alt_text_with_ai($image_url);
+
+        
+        if (!$ai_result || !isset($ai_result['alt_text'])) {
+            return array('success' => false, 'message' => 'AI generation failed');
+        }
+        
+        update_post_meta($attachment_id, '_wp_attachment_image_alt', $ai_result['alt_text']);
+        
+        return array('success' => true, 'alt_text' => $ai_result['alt_text']);
+    }
+    
+    private function generate_alt_text_with_ai($image_url) {
+        $api_key = get_option('ai_seo_api_key');
+        $model = get_option('ai_seo_model', 'x-ai/grok-4-fast:free');
+        $prompt_template = stripslashes(get_option('ai_seo_media_prompt'));
+        $company_name = get_option('ai_seo_company_name');
+        $keywords = get_option('ai_seo_keywords', '');
+        
+        if (!$api_key) return false;
+        
+        $prompt = str_replace(
+            array('{company_name}', '{keywords}', '{image_url}'),
+            array($company_name, $keywords, $image_url),
+            $prompt_template
+        );
+        
+        $data = array(
+            'model' => $model,
+            'messages' => array(
+                array(
+                    'role' => 'user',
+                    'content' => array(
+                        array('type' => 'text', 'text' => $prompt),
+                        array('type' => 'image_url', 'image_url' => array('url' => $image_url))
+                    )
+                )
+            )
+        );
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://openrouter.ai/api/v1/chat/completions');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Authorization: Bearer ' . $api_key,
+            'Content-Type: application/json'
+        ));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $result = json_decode($response, true);
+        
+        if (!isset($result['choices'][0]['message']['content'])) {
+            return false;
+        }
+        
+        $ai_content = $result['choices'][0]['message']['content'];
+        
+        if (preg_match('/\{.*\}/', $ai_content, $matches)) {
+            $alt_data = json_decode($matches[0], true);
+            if ($alt_data && isset($alt_data['alt_text'])) {
+                return $alt_data;
+            }
+        }
+        
+        $alt_data = json_decode($ai_content, true);
+        if ($alt_data && isset($alt_data['alt_text'])) {
+            return $alt_data;
+        }
+        
+        return false;
+    }
+
+    public function ajax_bulk_process_media() {
+        check_ajax_referer('ai_seo_nonce', 'nonce');
+        
+        $attachments = get_posts(array(
+            'post_type' => 'attachment',
+            'post_mime_type' => 'image',
+            'post_status' => 'inherit',
+            'numberposts' => 10
+        ));
+        
+        $processed = 0;
+        
+        foreach ($attachments as $attachment) {
+            $this->process_media_alt($attachment->ID);
+            $processed++;
+        }
+        
+        wp_die(json_encode(array('success' => true, 'message' => "Processed {$processed} images")));
     }
 }
 
