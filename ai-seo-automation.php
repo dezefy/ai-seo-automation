@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -88,7 +88,7 @@ class AISEOPlugin {
     
     public function enqueue_scripts($hook) {
         if (strpos($hook, 'ai-seo') !== false) {
-            wp_enqueue_script('ai-seo-admin', plugin_dir_url(__FILE__) . 'admin.js', array('jquery'), '1.1.0', true);
+            wp_enqueue_script('ai-seo-admin', plugin_dir_url(__FILE__) . 'admin.js', array('jquery'), '1.1.1', true);
             wp_localize_script('ai-seo-admin', 'ai_seo_ajax', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('ai_seo_nonce')
@@ -694,18 +694,26 @@ class AISEOPlugin {
         }
         
         $ai_content = $result['choices'][0]['message']['content'];
-        
-        if (preg_match('/\{.*\}/', $ai_content, $matches)) {
+
+        // Remove markdown code blocks if present
+        $ai_content = preg_replace('/```json\s*|\s*```/', '', $ai_content);
+        $ai_content = trim($ai_content);
+
+        // Try to extract JSON
+        if (preg_match('/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/s', $ai_content, $matches)) {
             $alt_data = json_decode($matches[0], true);
             if ($alt_data && isset($alt_data['alt_text'])) {
                 return $alt_data;
             }
         }
-        
+
+        // Fallback: try direct decode
         $alt_data = json_decode($ai_content, true);
         if ($alt_data && isset($alt_data['alt_text'])) {
             return $alt_data;
         }
+
+        error_log('AI SEO Plugin: Could not parse alt text response - ' . $ai_content);
         
         return false;
     }
