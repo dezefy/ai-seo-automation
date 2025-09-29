@@ -6,7 +6,7 @@
  * Author: Trac Solutions LLC
  * Update URI: https://github.com/myuser/my-plugin
  */
-
+ 
 if (!defined('ABSPATH')) {
     exit;
 }
