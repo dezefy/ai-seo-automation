@@ -2,9 +2,9 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.0.0
- * Author: Trac Solutions LLC
- * Update URI: https://github.com/myuser/my-plugin
+ * Version: 1.0.1
+ * Author: Dezefy LLC
+ * Update URI: https://github.com/dezefy/ai-seo-automation
  */
  
 if (!defined('ABSPATH')) {
@@ -19,9 +19,9 @@ use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 // Build the update checker (point it at your repo).
 $updateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/myuser/my-plugin/', // Repo URL
+    'https://github.com/dezefy/ai-seo-automation/', // Repo URL
     __FILE__,                                // Main plugin file
-    'my-plugin-slug'                         // Plugin slug (unique)
+    'ai-seo-automation'                         // Plugin slug (unique)
 );
 
 // If your stable code is on a branch other than 'master':

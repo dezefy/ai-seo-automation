@@ -1,0 +1,21 @@
+name: Build & Release
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Build plugin zip
+        run: |
+          PLUGDIR="ai-seo-automation"
+          ZIPNAME="${PLUGDIR}.zip"
+          # Remove dev-only files if needed.
+          zip -r "$ZIPNAME" "$PLUGDIR" -x "**/.git*" "**/tests/**" "**/.github/**"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ai-seo-automation.zip
