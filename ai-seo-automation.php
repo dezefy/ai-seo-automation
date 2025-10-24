@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.1.4
+ * Version: 1.1.5
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -696,6 +696,10 @@ class AISEOPlugin {
         curl_close($ch);
         
         $result = json_decode($response, true);
+
+        var_dump($result);
+
+        die();
         
         if (!isset($result['choices'][0]['message']['content'])) {
             return false;
