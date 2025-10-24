@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -149,7 +149,7 @@ class AISEOPlugin {
                                 <option value="microsoft/mai-ds-r1:free" <?php selected($model, 'microsoft/mai-ds-r1:free'); ?>>Microsoft MAI DS R1 (Free)</option>
                                 <option value="z-ai/glm-4.5-air:free" <?php selected($model, 'z-ai/glm-4.5-air:free'); ?>>GLM 4.5 Air (Free)</option>
                                 <option value="meta-llama/llama-3.3-70b-instruct:free" <?php selected($model, 'meta-llama/llama-3.3-70b-instruct:free'); ?>>Llama 3.3 70B Instruct (Free)</option>
-
+                                <option value="google/gemini-2.5-flash" <?php selected($model, 'google/gemini-2.5-flash'); ?>>Gemini 2.5 Flash</option>    
                             </select>
                         </td>
                     </tr>
