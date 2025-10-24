@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.1.6
+ * Version: 1.1.8
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -522,30 +522,31 @@ class AISEOPlugin {
         
         $result = json_decode($response, true);
 
-        var_dump($result);
-        die();
-        
         if (!isset($result['choices'][0]['message']['content'])) {
             error_log('AI SEO Plugin: Invalid API response - ' . print_r($result, true));
             return false;
         }
-        
+
         $ai_content = $result['choices'][0]['message']['content'];
-        
-        // Try to extract JSON from the response
-        if (preg_match('/\{.*\}/', $ai_content, $matches)) {
+
+        // Remove markdown code blocks if present
+        $ai_content = preg_replace('/```json\s*|\s*```/', '', $ai_content);
+        $ai_content = trim($ai_content);
+
+        // Try to extract JSON from the response (non-greedy match with better pattern)
+        if (preg_match('/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/s', $ai_content, $matches)) {
             $seo_data = json_decode($matches[0], true);
             if ($seo_data && isset($seo_data['meta_title']) && isset($seo_data['meta_description'])) {
                 return $seo_data;
             }
         }
-        
+
         // Fallback: try to parse the entire response as JSON
         $seo_data = json_decode($ai_content, true);
         if ($seo_data && isset($seo_data['meta_title']) && isset($seo_data['meta_description'])) {
             return $seo_data;
         }
-        
+
         error_log('AI SEO Plugin: Could not parse AI response - ' . $ai_content);
         return false;
     }
@@ -700,9 +701,7 @@ class AISEOPlugin {
         
         $result = json_decode($response, true);
 
-        var_dump($result);
 
-        die();
         
         if (!isset($result['choices'][0]['message']['content'])) {
             return false;
