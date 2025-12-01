@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI SEO Automation
  * Description: Automated SEO optimization using AI
- * Version: 1.1.8
+ * Version: 1.1.9
  * Author: Dezefy LLC
  * Update URI: https://github.com/dezefy/ai-seo-automation
  */
@@ -140,6 +140,8 @@ class AISEOPlugin {
                         <td>
                             <select id="model" name="model">
                                 <option value="x-ai/grok-4-fast:free" <?php selected($model, 'x-ai/grok-4-fast:free'); ?>>Grok 4 Fast (Free)</option>
+                                <option value="x-ai/grok-4.1-fast:free" <?php selected($model, 'x-ai/grok-4.1-fast:free'); ?>>Grok 4.1 Fast (Free)</option>
+                                
                                 <option value="google/gemini-2.0-flash-exp:free" <?php selected($model, 'google/gemini-2.0-flash-exp:free'); ?>>Gemini 2.0 Flash (Free)</option>
                                 <option value="meta-llama/llama-4-maverick:free" <?php selected($model, 'meta-llama/llama-4-maverick:free'); ?>>Llama 4 Maverick (Free)</option>
 
